@@ -1,0 +1,9 @@
+{
+    "db": "forumDB",
+    "user": "kirnic",
+    "pass": "0072",
+    "dial": "mysql",
+    "host": "127.0.0.1",
+    "port": "5000",
+    "path": "/tmp/mysql.sock"
+}
