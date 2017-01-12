@@ -1,3 +1,11 @@
+#
+# SQL Export
+# Created by Querious (1064)
+# Created: 12 января 2017 г., 3:04:03 GMT+3
+# Encoding: Unicode (UTF-8)
+#
+
+
 DROP DATABASE IF EXISTS `forumDB`;
 CREATE DATABASE `forumDB` DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
 USE `forumDB`;
@@ -33,8 +41,9 @@ CREATE TABLE `forum` (
   `user` varchar(150) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_short_name` (`short_name`) USING BTREE,
-  KEY `user` (`user`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  UNIQUE KEY `idx_name` (`name`) USING BTREE,
+  KEY `idx_user` (`user`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8;
 
 
 CREATE TABLE `post` (
@@ -56,20 +65,18 @@ CREATE TABLE `post` (
   `first_path` int(11) NOT NULL DEFAULT '0',
   `last_path` varchar(150) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
-  KEY `idx_forum_user` (`forum`,`user`) USING BTREE,
-  KEY `idx_thread_date` (`thread`,`date`) USING BTREE,
+  KEY `idx_forum_date` (`forum`,`date`) USING BTREE,
   KEY `idx_user_date` (`user`,`date`) USING BTREE,
+  KEY `idx_thread_date` (`thread`,`date`) USING BTREE,
   KEY `idx_thread_first_path_last_path` (`thread`,`first_path`,`last_path`) USING BTREE,
-  KEY `idx_forum` (`forum`,`date`) USING BTREE,
-  KEY `idx_thread_isDeleted` (`thread`,`isDeleted`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  KEY `idx_forum_user` (`forum`,`user`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1000057 DEFAULT CHARSET=utf8;
 
 
 CREATE TABLE `subscription` (
   `user` varchar(150) NOT NULL,
   `thread` int(11) NOT NULL,
-  PRIMARY KEY (`user`,`thread`),
-  KEY `idx_user_thread` (`user`,`thread`) USING BTREE
+  PRIMARY KEY (`user`,`thread`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
@@ -90,7 +97,7 @@ CREATE TABLE `thread` (
   PRIMARY KEY (`id`),
   KEY `idx_forum_date` (`forum`,`date`) USING BTREE,
   KEY `idx_user_date` (`user`,`date`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=10053 DEFAULT CHARSET=utf8;
 
 
 CREATE TABLE `user` (
@@ -102,8 +109,9 @@ CREATE TABLE `user` (
   `isAnonymous` tinyint(4) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_email` (`email`) USING BTREE,
-  UNIQUE KEY `idx_name_email` (`name`,`email`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  UNIQUE KEY `idx_name` (`name`,`email`) USING BTREE,
+  KEY `idx_id_name` (`id`,`name`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=100055 DEFAULT CHARSET=utf8;
 
 
 
