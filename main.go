@@ -99,6 +99,7 @@ func initDB(config *Config) *DB {
 	connection := config.USER + ":" + config.PASS + "@/" + config.DB + "?charset=utf8"
 	db, err := sql.Open("mysql", connection)
 	errCheck(err)
+	db.SetMaxIdleConns(100)
 	dbmap := &gorp.DbMap{Db: db, Dialect: gorp.MySQLDialect{Encoding: "utf8", Engine: "InnoDB"}}
 	return &DB{Map: dbmap}
 }
@@ -360,6 +361,7 @@ func (db *DB) forumListUsers(c *gin.Context) {
 	} else {
 		db.Map.Select(&users, query, forum)
 	}
+
 	response := make([]gin.H, len(users))
 	for i, user := range users {
 		var follower, following []string
