@@ -1,7 +1,7 @@
 #
 # SQL Export
 # Created by Querious (1064)
-# Created: 12 января 2017 г., 3:04:03 GMT+3
+# Created: 13 января 2017 г., 16:08:07 GMT+3
 # Encoding: Unicode (UTF-8)
 #
 
@@ -29,7 +29,6 @@ CREATE TABLE `follow` (
   `follower` varchar(150) NOT NULL,
   `following` varchar(150) NOT NULL,
   PRIMARY KEY (`follower`,`following`),
-  KEY `idx_follower_following` (`follower`,`following`) USING BTREE,
   KEY `idx_following_follower` (`following`,`follower`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -43,7 +42,7 @@ CREATE TABLE `forum` (
   UNIQUE KEY `idx_short_name` (`short_name`) USING BTREE,
   UNIQUE KEY `idx_name` (`name`) USING BTREE,
   KEY `idx_user` (`user`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=289 DEFAULT CHARSET=utf8;
 
 
 CREATE TABLE `post` (
@@ -70,7 +69,7 @@ CREATE TABLE `post` (
   KEY `idx_thread_date` (`thread`,`date`) USING BTREE,
   KEY `idx_thread_first_path_last_path` (`thread`,`first_path`,`last_path`) USING BTREE,
   KEY `idx_forum_user` (`forum`,`user`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1000057 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1000454 DEFAULT CHARSET=utf8;
 
 
 CREATE TABLE `subscription` (
@@ -97,7 +96,7 @@ CREATE TABLE `thread` (
   PRIMARY KEY (`id`),
   KEY `idx_forum_date` (`forum`,`date`) USING BTREE,
   KEY `idx_user_date` (`user`,`date`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=10053 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=10372 DEFAULT CHARSET=utf8;
 
 
 CREATE TABLE `user` (
@@ -111,7 +110,7 @@ CREATE TABLE `user` (
   UNIQUE KEY `idx_email` (`email`) USING BTREE,
   UNIQUE KEY `idx_name` (`name`,`email`) USING BTREE,
   KEY `idx_id_name` (`id`,`name`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=100055 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=100287 DEFAULT CHARSET=utf8;
 
 
 

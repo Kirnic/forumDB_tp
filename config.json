@@ -1,6 +1,6 @@
 {
     "db": "forumDB",
-    "user": "kirnic",
+    "user": "root",
     "pass": "0072",
     "dial": "mysql",
     "host": "127.0.0.1",
