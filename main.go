@@ -346,50 +346,31 @@ func (db *DB) forumListThreads(c *gin.Context) {
 func (db *DB) forumListUsers(c *gin.Context) {
 	forum := c.Query("forum")
 	since := c.Query("since_id")
-	query := "select email from user where email IN (select distinct user from post where forum = ?)"
-	// query2 := "select * from user where email IN (select distinct user from post where forum = ?)"
+	query := "select * from user where email IN (select distinct user from post where forum = ?)"
 	if since != "" {
 		query += " and `user`.`id` >= ?"
-		// query2 += " and `user`.`id` >= ?"
 	}
 	query += " order by `user`.`name` " + c.DefaultQuery("order", "desc")
-	// query2 += " order by `user`.`name` " + c.DefaultQuery("order", "desc")
 	if limit := c.Query("limit"); limit != "" {
 		query += " limit " + limit
-		// query2 += " limit " + limit
 	}
-	var emails []string
-	// users := []User{}
+	users := []User{}
 	if since != "" {
-		db.Map.Select(&emails, query, forum, since)
-		// db.Map.Select(&users, query2, forum, since)
-
+		db.Map.Select(&users, query, forum, since)
 	} else {
-		db.Map.Select(&emails, query, forum)
-		// db.Map.Select(&users, query2, forum)
+		db.Map.Select(&users, query, forum)
 	}
+	response := make([]gin.H, len(users))
+	for i, user := range users {
+		var follower, following []string
+		var subs []int
+		db.Map.Select(&follower, "select follower from follow where following = ?", user.Email)
+		db.Map.Select(&following, "select following from follow where follower = ?", user.Email)
+		db.Map.Select(&subs, "select thread from subscription where user = ?", user.Email)
 
-	response := make([]gin.H, len(emails))
-	for i, email := range emails {
-		response[i] = db.userSelect(email)
+		response[i] = gin.H{"about": user.About, "id": user.ID, "name": user.Name,
+			"username": user.Username, "email": user.Email, "isAnonymous": user.IsAnonymous, "followers": follower, "following": following, "subscriptions": subs}
 	}
-
-	// response2 := make([]gin.H, len(users))
-	// for i, user := range users {
-	// 	response2[i] = gin.H{"about": user.About, "id": user.ID, "name": user.Name,
-	// 		"username": user.Username, "email": user.Email, "isAnonymous": user.IsAnonymous}
-
-	// 	var follower, following []string
-	// 	var subs []int
-
-	// 	db.Map.Select(&follower, "select follower from follow where following = ?", user.Email)
-	// 	db.Map.Select(&following, "select following from follow where follower = ?", user.Email)
-	// 	db.Map.Select(&subs, "select thread from subscription where user = ?", user.Email)
-	// 	response2[i]["followers"] = follower
-	// 	response2[i]["following"] = following
-	// 	response2[i]["subscriptions"] = subs
-
-	// }
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "response": response})
 }
