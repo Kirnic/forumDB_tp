@@ -444,74 +444,48 @@ func (db *DB) threadList(c *gin.Context) {
 
 func (db *DB) threadListPosts(c *gin.Context) {
 	posts := []Post{}
-
-	query := "SELECT * FROM post WHERE thread = " + c.Query("thread")
+	query := "select * from post where thread = " + c.Query("thread")
 	if since := c.Query("since"); since != "" {
-		query += " AND date >= " + "\"" + since + "\""
+		query += " and date >= " + "\"" + since + "\""
 	}
 	order := c.Query("order")
-
-	sortType := c.Query("sort")
-	if sortType != "parent_tree" {
-		if sortType == "" {
-			query += " ORDER BY date " + c.DefaultQuery("order", "desc")
+	sort := c.Query("sort")
+	if sort != "parent_tree" {
+		if sort == "" || sort == "flat" {
+			query += " order by date " + c.DefaultQuery("order", "desc")
 			if limit := c.Query("limit"); limit != "" {
-				query += " LIMIT " + limit
+				query += " limit " + limit
 			}
-
-		} else if sortType == "flat" {
-			query += " ORDER BY date " + c.DefaultQuery("order", "desc")
+		} else if sort == "tree" {
+			query += "order by first_path " + order + ", last_path asc "
 			if limit := c.Query("limit"); limit != "" {
-				query += " LIMIT " + limit
-			}
-		} else if sortType == "tree" {
-			if order == "desc" {
-				query += "ORDER BY first_path DESC, last_path ASC "
-				if limit := c.Query("limit"); limit != "" {
-					query += " LIMIT " + limit
-				}
-			}
-			if order == "asc" {
-				query += "ORDER BY first_path ASC, last_path ASC "
-				if limit := c.Query("limit"); limit != "" {
-					query += " LIMIT " + limit
-				}
+				query += " limit " + limit
 			}
 		}
 		db.Map.Select(&posts, query)
-		c.JSON(200, gin.H{"code": 0, "response": posts})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "response": posts})
 	}
-	if sortType == "parent_tree" {
-		var postsTemp []Post
-		var resultPosts []Post
+	if sort == "parent_tree" {
+		postsTemp := []Post{}
+		resultList := []Post{}
 
-		query += "ORDER BY first_path ASC"
-		query += ", last_path ASC"
+		query += "order by first_path asc, last_path asc"
 		limit := c.Query("limit")
 		db.Map.Select(&postsTemp, query)
-		currentParentFirstPath := -1
+		currParFirstPath := -1
 		limitInt, _ := strconv.Atoi(limit)
 		counter := 0
 		for i := 0; i < len(postsTemp); i++ {
-
-			if currentParentFirstPath != postsTemp[i].FirstPath {
-				currentParentFirstPath = postsTemp[i].FirstPath
+			if currParFirstPath != postsTemp[i].FirstPath {
+				currParFirstPath = postsTemp[i].FirstPath
 				counter++
 			}
 			if counter > limitInt {
-
 				break
 			}
-
-			resultPosts = append(resultPosts, postsTemp[i])
+			resultList = append(resultList, postsTemp[i])
 		}
-		for i := 0; i < len(resultPosts); i++ {
-			print(resultPosts[i].FirstPath)
-			println(resultPosts[i].LastPath)
-		}
-
-		c.JSON(200, gin.H{"code": 0, "response": resultPosts})
-
+		c.JSON(http.StatusOK, gin.H{"code": 0, "response": resultList})
 	}
 }
 
