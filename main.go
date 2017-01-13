@@ -445,41 +445,41 @@ func (db *DB) threadList(c *gin.Context) {
 func (db *DB) threadListPosts(c *gin.Context) {
 	posts := []Post{}
 
-	query := "SELECT * FROM post WHERE thread = " + context.Query("thread")
-	if since := context.Query("since"); since != "" {
+	query := "SELECT * FROM post WHERE thread = " + c.Query("thread")
+	if since := c.Query("since"); since != "" {
 		query += " AND date >= " + "\"" + since + "\""
 	}
-	order := context.Query("order")
+	order := c.Query("order")
 
-	sortType := context.Query("sort")
+	sortType := c.Query("sort")
 	if sortType != "parent_tree" {
 		if sortType == "" {
-			query += " ORDER BY date " + context.DefaultQuery("order", "desc")
-			if limit := context.Query("limit"); limit != "" {
+			query += " ORDER BY date " + c.DefaultQuery("order", "desc")
+			if limit := c.Query("limit"); limit != "" {
 				query += " LIMIT " + limit
 			}
 
 		} else if sortType == "flat" {
-			query += " ORDER BY date " + context.DefaultQuery("order", "desc")
-			if limit := context.Query("limit"); limit != "" {
+			query += " ORDER BY date " + c.DefaultQuery("order", "desc")
+			if limit := c.Query("limit"); limit != "" {
 				query += " LIMIT " + limit
 			}
 		} else if sortType == "tree" {
 			if order == "desc" {
 				query += "ORDER BY first_path DESC, last_path ASC "
-				if limit := context.Query("limit"); limit != "" {
+				if limit := c.Query("limit"); limit != "" {
 					query += " LIMIT " + limit
 				}
 			}
 			if order == "asc" {
 				query += "ORDER BY first_path ASC, last_path ASC "
-				if limit := context.Query("limit"); limit != "" {
+				if limit := c.Query("limit"); limit != "" {
 					query += " LIMIT " + limit
 				}
 			}
 		}
 		db.Map.Select(&posts, query)
-		context.JSON(200, gin.H{"code": 0, "response": posts})
+		c.JSON(200, gin.H{"code": 0, "response": posts})
 	}
 	if sortType == "parent_tree" {
 		var postsTemp []Post
@@ -487,7 +487,7 @@ func (db *DB) threadListPosts(c *gin.Context) {
 
 		query += "ORDER BY first_path ASC"
 		query += ", last_path ASC"
-		limit := context.Query("limit")
+		limit := c.Query("limit")
 		db.Map.Select(&postsTemp, query)
 		currentParentFirstPath := -1
 		limitInt, _ := strconv.Atoi(limit)
@@ -510,7 +510,7 @@ func (db *DB) threadListPosts(c *gin.Context) {
 			println(resultPosts[i].LastPath)
 		}
 
-		context.JSON(200, gin.H{"code": 0, "response": resultPosts})
+		c.JSON(200, gin.H{"code": 0, "response": resultPosts})
 
 	}
 }
