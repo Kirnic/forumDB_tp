@@ -442,125 +442,125 @@ func (db *DB) threadList(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "response": threads})
 }
 
-// func (db *DB) threadListPosts(c *gin.Context) {
-// 	posts := []Post{}
-// 	query := "select * from post where thread = " + c.Query("thread")
-// 	if since := c.Query("since"); since != "" {
-// 		query += " and date >= " + "\"" + since + "\""
-// 	}
-// 	order := c.Query("order")
-// 	sort := c.Query("sort")
-// 	if sort != "parent_tree" {
-// 		if sort == "" || sort == "flat" {
-// 			query += " order by date " + c.DefaultQuery("order", "desc")
-// 			if limit := c.Query("limit"); limit != "" {
-// 				query += " limit " + limit
-// 			}
-// 		} else if sort == "tree" {
-// 			query += "order by first_path " + order + ", last_path asc "
-// 			if limit := c.Query("limit"); limit != "" {
-// 				query += " limit " + limit
-// 			}
-// 		}
-// 		db.Map.Select(&posts, query)
-// 		c.JSON(http.StatusOK, gin.H{"code": 0, "response": posts})
-// 	}
-// 	if sort == "parent_tree" {
-// 		postsTemp := []Post{}
-// 		resultList := []Post{}
-
-// 		query += "order by first_path asc, last_path asc"
-// 		limit := c.Query("limit")
-// 		db.Map.Select(&postsTemp, query)
-// 		currParFirstPath := -1
-// 		limitInt, _ := strconv.Atoi(limit)
-// 		counter := 0
-// 		for i := 0; i < len(postsTemp); i++ {
-// 			if currParFirstPath != postsTemp[i].FirstPath {
-// 				currParFirstPath = postsTemp[i].FirstPath
-// 				counter++
-// 			}
-// 			if counter > limitInt {
-// 				break
-// 			}
-// 			resultList = append(resultList, postsTemp[i])
-// 		}
-// 		c.JSON(http.StatusOK, gin.H{"code": 0, "response": resultList})
-// 	}
-// }
-
-func (db *DB) threadListPosts(context *gin.Context) {
-	var posts []Post
-
-	query := "SELECT * FROM post WHERE thread = " + context.Query("thread")
-	if since := context.Query("since"); since != "" {
-		query += " AND date >= " + "\"" + since + "\""
+func (db *DB) threadListPosts(c *gin.Context) {
+	posts := []Post{}
+	query := "select * from post where thread = " + c.Query("thread")
+	if since := c.Query("since"); since != "" {
+		query += " and date >= " + "\"" + since + "\""
 	}
-	order := context.Query("order")
-
-	sortType := context.Query("sort")
-	if sortType != "parent_tree" {
-		if sortType == "" {
-			query += " ORDER BY date " + context.DefaultQuery("order", "desc")
-			if limit := context.Query("limit"); limit != "" {
-				query += " LIMIT " + limit
+	order := c.Query("order")
+	sort := c.Query("sort")
+	if sort != "parent_tree" {
+		if sort == "" || sort == "flat" {
+			query += " order by date " + c.DefaultQuery("order", "desc")
+			if limit := c.Query("limit"); limit != "" {
+				query += " limit " + limit
 			}
-
-		} else if sortType == "flat" {
-			query += " ORDER BY date " + context.DefaultQuery("order", "desc")
-			if limit := context.Query("limit"); limit != "" {
-				query += " LIMIT " + limit
-			}
-		} else if sortType == "tree" {
-			if order == "desc" {
-				query += "ORDER BY first_path DESC, last_path ASC "
-				if limit := context.Query("limit"); limit != "" {
-					query += " LIMIT " + limit
-				}
-			}
-			if order == "asc" {
-				query += "ORDER BY first_path ASC, last_path ASC "
-				if limit := context.Query("limit"); limit != "" {
-					query += " LIMIT " + limit
-				}
+		} else if sort == "tree" {
+			query += "order by first_path " + order + ", last_path asc "
+			if limit := c.Query("limit"); limit != "" {
+				query += " limit " + limit
 			}
 		}
 		db.Map.Select(&posts, query)
-		context.JSON(200, gin.H{"code": 0, "response": posts})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "response": posts})
 	}
-	if sortType == "parent_tree" {
-		var postsTemp []Post
-		var resultPosts []Post
+	if sort == "parent_tree" {
+		postsTemp := []Post{}
+		resultList := []Post{}
 
-		query += "ORDER BY first_path ASC"
-		query += ", last_path ASC"
-		limit := context.Query("limit")
+		query += "order by first_path asc, last_path asc"
+		limit := c.Query("limit")
 		db.Map.Select(&postsTemp, query)
-		currentParentFirstPath := -1
+		currParFirstPath := -1
 		limitInt, _ := strconv.Atoi(limit)
 		counter := 0
 		for i := 0; i < len(postsTemp); i++ {
-
-			if currentParentFirstPath != postsTemp[i].FirstPath {
-				currentParentFirstPath = postsTemp[i].FirstPath
+			if currParFirstPath != postsTemp[i].FirstPath {
+				currParFirstPath = postsTemp[i].FirstPath
 				counter++
 			}
 			if counter > limitInt {
-
 				break
 			}
-
-			resultPosts = append(resultPosts, postsTemp[i])
+			resultList = append(resultList, postsTemp[i])
 		}
-		for i := 0; i < len(resultPosts); i++ {
-			print(resultPosts[i].FirstPath)
-			println(resultPosts[i].LastPath)
-		}
-
-		context.JSON(200, gin.H{"code": 0, "response": resultPosts})
-
+		c.JSON(http.StatusOK, gin.H{"code": 0, "response": resultList})
 	}
 }
+
+// func (db *DB) threadListPosts(context *gin.Context) {
+// 	var posts []Post
+
+// 	query := "SELECT * FROM post WHERE thread = " + context.Query("thread")
+// 	if since := context.Query("since"); since != "" {
+// 		query += " AND date >= " + "\"" + since + "\""
+// 	}
+// 	order := context.Query("order")
+
+// 	sortType := context.Query("sort")
+// 	if sortType != "parent_tree" {
+// 		if sortType == "" {
+// 			query += " ORDER BY date " + context.DefaultQuery("order", "desc")
+// 			if limit := context.Query("limit"); limit != "" {
+// 				query += " LIMIT " + limit
+// 			}
+
+// 		} else if sortType == "flat" {
+// 			query += " ORDER BY date " + context.DefaultQuery("order", "desc")
+// 			if limit := context.Query("limit"); limit != "" {
+// 				query += " LIMIT " + limit
+// 			}
+// 		} else if sortType == "tree" {
+// 			if order == "desc" {
+// 				query += "ORDER BY first_path DESC, last_path ASC "
+// 				if limit := context.Query("limit"); limit != "" {
+// 					query += " LIMIT " + limit
+// 				}
+// 			}
+// 			if order == "asc" {
+// 				query += "ORDER BY first_path ASC, last_path ASC "
+// 				if limit := context.Query("limit"); limit != "" {
+// 					query += " LIMIT " + limit
+// 				}
+// 			}
+// 		}
+// 		db.Map.Select(&posts, query)
+// 		context.JSON(200, gin.H{"code": 0, "response": posts})
+// 	}
+// 	if sortType == "parent_tree" {
+// 		var postsTemp []Post
+// 		var resultPosts []Post
+
+// 		query += "ORDER BY first_path ASC"
+// 		query += ", last_path ASC"
+// 		limit := context.Query("limit")
+// 		db.Map.Select(&postsTemp, query)
+// 		currentParentFirstPath := -1
+// 		limitInt, _ := strconv.Atoi(limit)
+// 		counter := 0
+// 		for i := 0; i < len(postsTemp); i++ {
+
+// 			if currentParentFirstPath != postsTemp[i].FirstPath {
+// 				currentParentFirstPath = postsTemp[i].FirstPath
+// 				counter++
+// 			}
+// 			if counter > limitInt {
+
+// 				break
+// 			}
+
+// 			resultPosts = append(resultPosts, postsTemp[i])
+// 		}
+// 		for i := 0; i < len(resultPosts); i++ {
+// 			print(resultPosts[i].FirstPath)
+// 			println(resultPosts[i].LastPath)
+// 		}
+
+// 		context.JSON(200, gin.H{"code": 0, "response": resultPosts})
+
+// 	}
+// }
 
 func (db *DB) threadOpen(c *gin.Context) {
 	var thread struct {
@@ -739,58 +739,58 @@ func (db *DB) postDetails(c *gin.Context) {
 	}
 }
 
-// func (db *DB) postList(c *gin.Context) {
-// 	forum := c.Query("forum")
-// 	thread := c.Query("thread")
-// 	since := c.Query("since")
-// 	query := "select * from post where "
-// 	if forum != "" {
-// 		query += "forum = ?"
-// 	} else if thread != "" {
-// 		query += "thread = ?"
-// 	}
-// 	if since != "" {
-// 		query += " and date >= ?"
-// 	}
-// 	query += " order by date " + c.DefaultQuery("order", "desc")
-// 	if limit := c.Query("limit"); limit != "" {
-// 		query += " limit " + limit
-// 	}
-// 	var posts []Post
-// 	if forum != "" {
-// 		if since != "" {
-// 			db.Map.Select(&posts, query, forum, since)
-// 		} else {
-// 			db.Map.Select(&posts, query, forum)
-// 		}
-// 	} else if thread != "" {
-// 		if since != "" {
-// 			db.Map.Select(&posts, query, thread, since)
-// 		} else {
-// 			db.Map.Select(&posts, query, thread)
-// 		}
-// 	}
-// 	c.JSON(http.StatusOK, gin.H{"code": 0, "response": posts})
-// }
-
-func (db *DB) postList(context *gin.Context) {
-	query := "SELECT * FROM post WHERE"
-	if forum := context.Query("forum"); forum != "" {
-		query += " forum = " + "\"" + forum + "\""
-	} else {
-		query += " thread = " + context.Query("thread")
+func (db *DB) postList(c *gin.Context) {
+	forum := c.Query("forum")
+	thread := c.Query("thread")
+	since := c.Query("since")
+	query := "select * from post where "
+	if forum != "" {
+		query += "forum = ?"
+	} else if thread != "" {
+		query += "thread = ?"
 	}
-	if since := context.Query("since"); since != "" {
-		query += " AND date >= " + "\"" + since + "\""
+	if since != "" {
+		query += " and date >= ?"
 	}
-	query += " ORDER BY date " + context.DefaultQuery("order", "desc")
-	if limit := context.Query("limit"); limit != "" {
-		query += " LIMIT " + limit
+	query += " order by date " + c.DefaultQuery("order", "desc")
+	if limit := c.Query("limit"); limit != "" {
+		query += " limit " + limit
 	}
 	var posts []Post
-	db.Map.Select(&posts, query)
-	context.JSON(200, gin.H{"code": 0, "response": posts})
+	if forum != "" {
+		if since != "" {
+			db.Map.Select(&posts, query, forum, since)
+		} else {
+			db.Map.Select(&posts, query, forum)
+		}
+	} else if thread != "" {
+		if since != "" {
+			db.Map.Select(&posts, query, thread, since)
+		} else {
+			db.Map.Select(&posts, query, thread)
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "response": posts})
 }
+
+// func (db *DB) postList(context *gin.Context) {
+// 	query := "SELECT * FROM post WHERE"
+// 	if forum := context.Query("forum"); forum != "" {
+// 		query += " forum = " + "\"" + forum + "\""
+// 	} else {
+// 		query += " thread = " + context.Query("thread")
+// 	}
+// 	if since := context.Query("since"); since != "" {
+// 		query += " AND date >= " + "\"" + since + "\""
+// 	}
+// 	query += " ORDER BY date " + context.DefaultQuery("order", "desc")
+// 	if limit := context.Query("limit"); limit != "" {
+// 		query += " LIMIT " + limit
+// 	}
+// 	var posts []Post
+// 	db.Map.Select(&posts, query)
+// 	context.JSON(200, gin.H{"code": 0, "response": posts})
+// }
 
 func (db *DB) postRemove(c *gin.Context) {
 	var post struct {
