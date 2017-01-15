@@ -1,11 +1,3 @@
-#
-# SQL Export
-# Created by Querious (1064)
-# Created: 13 января 2017 г., 16:08:07 GMT+3
-# Encoding: Unicode (UTF-8)
-#
-
-
 DROP DATABASE IF EXISTS `forumDB`;
 CREATE DATABASE `forumDB` DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
 USE `forumDB`;
@@ -39,9 +31,7 @@ CREATE TABLE `forum` (
   `short_name` varchar(150) NOT NULL,
   `user` varchar(150) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_short_name` (`short_name`) USING BTREE,
-  UNIQUE KEY `idx_name` (`name`) USING BTREE,
-  KEY `idx_user` (`user`) USING BTREE
+  UNIQUE KEY `idx_short_name` (`short_name`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=289 DEFAULT CHARSET=utf8;
 
 

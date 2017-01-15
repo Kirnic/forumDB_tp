@@ -212,7 +212,7 @@ func relate(entities []string) Related {
 }
 
 func (db *DB) commonClear(c *gin.Context) {
-	tables := []string{"forum", "post", "user", "thread", "follow", "subscription", "user_forum"}
+	tables := []string{"forum", "post", "user", "thread", "follow", "subscription"}
 	for _, table := range tables {
 		db.Map.Exec(`truncate table ` + table)
 	}
@@ -223,46 +223,46 @@ func (db *DB) commonStatus(c *gin.Context) {
 	tables := []string{"forum", "post", "user", "thread"}
 	response := gin.H{}
 	for _, table := range tables {
-		rowsCount, _ := db.Map.SelectInt(`select count(*) from ` + table)
-		response[table] = rowsCount
+		count, _ := db.Map.SelectInt(`select count(*) from ` + table)
+		response[table] = count
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "response": response})
 }
 
 // FORUM METHODS
-
 func (db *DB) forumSelect(shortName string, full bool) gin.H {
 	forum := Forum{}
 	db.Map.SelectOne(&forum, "select * from forum where short_name = ?", shortName)
-	forumInfo := gin.H{"id": forum.ID, "name": forum.Name, "short_name": forum.ShortName, "user": forum.User}
+	response := gin.H{"id": forum.ID, "name": forum.Name, "short_name": forum.ShortName, "user": forum.User}
 	if full {
-		forumInfo["user"] = db.userSelect(forum.User)
+		response["user"] = db.userSelect(forum.User)
 	}
-	return forumInfo
+	return response
 }
 
 func (db *DB) forumCreate(c *gin.Context) {
 	forum := Forum{}
 	c.BindJSON(&forum)
 	db.Map.Exec("insert into forum (name, short_name, user) values(?, ?, ?)", forum.Name, forum.ShortName, forum.User)
-	c.JSON(http.StatusOK, gin.H{"code": 0, "response": db.forumSelect(forum.ShortName, false)})
+	response := db.forumSelect(forum.ShortName, false)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "response": response})
 }
 
 func (db *DB) forumDetails(c *gin.Context) {
 	forum := c.Query("forum")
-	forumInfo := gin.H{}
+	response := gin.H{}
 	if related := c.Query("related"); related == "user" {
-		forumInfo = db.forumSelect(forum, true)
+		response = db.forumSelect(forum, true)
 	} else {
-		forumInfo = db.forumSelect(forum, false)
+		response = db.forumSelect(forum, false)
 	}
-	c.JSON(http.StatusOK, gin.H{"code": 0, "response": forumInfo})
+	c.JSON(http.StatusOK, gin.H{"code": 0, "response": response})
 }
 
 func (db *DB) forumListPosts(c *gin.Context) {
 	entity := c.Request.URL.Query()["related"]
 	rel := relate(entity)
-	forum := c.Query("forum")
+	shortName := c.Query("forum")
 	since := c.Query("since")
 
 	query := "select * from post where forum = ?"
@@ -275,25 +275,22 @@ func (db *DB) forumListPosts(c *gin.Context) {
 	}
 	posts := []Post{}
 	if since != "" {
-		db.Map.Select(&posts, query, forum, since)
+		db.Map.Select(&posts, query, shortName, since)
 	} else {
-		db.Map.Select(&posts, query, forum)
+		db.Map.Select(&posts, query, shortName)
 	}
-	forumInfo := gin.H{}
+	forum := gin.H{}
 	if rel.Forum {
-		forumInfo = db.forumSelect(c.Query("forum"), false)
+		forum = db.forumSelect(shortName, false)
 	}
 	response := make([]gin.H, len(posts))
 	for i, post := range posts {
-		response[i] = gin.H{"date": post.Date, "dislikes": post.Dislikes, "forum": post.Forum, "id": post.ID,
-			"isApproved": post.IsApproved, "isDeleted": post.IsDeleted, "isEdited": post.IsEdited,
-			"isHighlighted": post.IsHighlighted, "isSpam": post.IsSpam, "likes": post.Likes, "message": post.Message,
-			"parent": post.Parent, "points": post.Points, "thread": post.Thread, "user": post.User}
+		response[i] = gin.H{"date": post.Date, "dislikes": post.Dislikes, "forum": post.Forum, "id": post.ID, "isApproved": post.IsApproved, "isDeleted": post.IsDeleted, "isEdited": post.IsEdited, "isHighlighted": post.IsHighlighted, "isSpam": post.IsSpam, "likes": post.Likes, "message": post.Message, "parent": post.Parent, "points": post.Points, "thread": post.Thread, "user": post.User}
+		if rel.Forum {
+			response[i]["forum"] = forum
+		}
 		if rel.User {
 			response[i]["user"] = db.userSelect(response[i]["user"].(string))
-		}
-		if rel.Forum {
-			response[i]["forum"] = forumInfo
 		}
 		if rel.Thread {
 			response[i]["thread"] = db.threadSelect(response[i]["thread"].(int))
@@ -304,11 +301,10 @@ func (db *DB) forumListPosts(c *gin.Context) {
 }
 
 func (db *DB) forumListThreads(c *gin.Context) {
-	related := c.Request.URL.Query()["related"]
-	rel := relate(related)
-	forum := c.Query("forum")
+	entity := c.Request.URL.Query()["related"]
+	rel := relate(entity)
+	shortName := c.Query("forum")
 	since := c.Query("since")
-
 	query := "select * from thread where forum = ?"
 	if since != "" {
 		query += " and date >= ?"
@@ -319,33 +315,29 @@ func (db *DB) forumListThreads(c *gin.Context) {
 	}
 	threads := []Thread{}
 	if since != "" {
-		db.Map.Select(&threads, query, forum, since)
+		db.Map.Select(&threads, query, shortName, since)
 	} else {
-		db.Map.Select(&threads, query, forum)
+		db.Map.Select(&threads, query, shortName)
 	}
-
-	forumInfo := gin.H{}
+	forum := gin.H{}
 	if rel.Forum {
-		forumInfo = db.forumSelect(forum, false)
+		forum = db.forumSelect(shortName, false)
 	}
-
 	response := make([]gin.H, len(threads))
 	for i, thread := range threads {
-		response[i] = gin.H{"date": thread.Date, "dislikes": thread.Dislikes, "forum": thread.Forum, "id": thread.ID,
-			"isClosed": thread.IsClosed, "isDeleted": thread.IsDeleted, "likes": thread.Likes, "message": thread.Message,
-			"points": thread.Points, "posts": thread.Posts, "slug": thread.Slug, "title": thread.Title, "user": thread.User}
+		response[i] = gin.H{"date": thread.Date, "dislikes": thread.Dislikes, "forum": thread.Forum, "id": thread.ID, "isClosed": thread.IsClosed, "isDeleted": thread.IsDeleted, "likes": thread.Likes, "message": thread.Message, "points": thread.Points, "posts": thread.Posts, "slug": thread.Slug, "title": thread.Title, "user": thread.User}
 		if rel.User {
 			response[i]["user"] = db.userSelect(response[i]["user"].(string))
 		}
 		if rel.Forum {
-			response[i]["forum"] = forumInfo
+			response[i]["forum"] = forum
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "response": response})
 }
 
 func (db *DB) forumListUsers(c *gin.Context) {
-	forum := c.Query("forum")
+	shortName := c.Query("forum")
 	since := c.Query("since_id")
 	query := "select * from user where email IN (select distinct user from post where forum = ?)"
 	if since != "" {
@@ -357,9 +349,9 @@ func (db *DB) forumListUsers(c *gin.Context) {
 	}
 	users := []User{}
 	if since != "" {
-		db.Map.Select(&users, query, forum, since)
+		db.Map.Select(&users, query, shortName, since)
 	} else {
-		db.Map.Select(&users, query, forum)
+		db.Map.Select(&users, query, shortName)
 	}
 
 	response := make([]gin.H, len(users))
@@ -370,15 +362,13 @@ func (db *DB) forumListUsers(c *gin.Context) {
 		db.Map.Select(&following, "select following from follow where follower = ?", user.Email)
 		db.Map.Select(&subs, "select thread from subscription where user = ?", user.Email)
 
-		response[i] = gin.H{"about": user.About, "id": user.ID, "name": user.Name,
-			"username": user.Username, "email": user.Email, "isAnonymous": user.IsAnonymous, "followers": follower, "following": following, "subscriptions": subs}
+		response[i] = gin.H{"about": user.About, "id": user.ID, "name": user.Name, "username": user.Username, "email": user.Email, "isAnonymous": user.IsAnonymous, "followers": follower, "following": following, "subscriptions": subs}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "response": response})
 }
 
 // THREAD METHODS
-
 func (db *DB) threadSelect(id int) gin.H {
 	thread := Thread{}
 	db.Map.SelectOne(&thread, "select * from thread where id = ?", id)
@@ -395,20 +385,22 @@ func (db *DB) threadCreate(c *gin.Context) {
 }
 
 func (db *DB) threadDetails(c *gin.Context) {
-	thread, _ := strconv.Atoi(c.Query("thread"))
-	threadInfo := db.threadSelect(thread)
+	id, _ := strconv.Atoi(c.Query("thread"))
+	thread := db.threadSelect(id)
+	entity := c.Request.URL.Query()["related"]
+	rel := relate(entity)
 
-	for _, entity := range c.Request.URL.Query()["related"] {
-		if entity == "user" {
-			threadInfo[entity] = db.userSelect(threadInfo[entity].(string))
-		} else if entity == "forum" {
-			threadInfo[entity] = db.forumSelect(threadInfo[entity].(string), false)
-		} else {
-			c.JSON(http.StatusOK, gin.H{"code": 3, "response": "Bad request"})
-			return
-		}
+	if rel.Thread {
+		c.JSON(http.StatusOK, gin.H{"code": 3, "response": "Bad request"})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": 0, "response": threadInfo})
+	if rel.User {
+		thread["user"] = db.userSelect(thread["user"].(string))
+	}
+	if rel.Forum {
+		thread["forum"] = db.forumSelect(thread["forum"].(string), false)
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "response": thread})
 }
 
 func (db *DB) threadClose(c *gin.Context) {
@@ -436,15 +428,15 @@ func (db *DB) threadList(c *gin.Context) {
 	if limit := c.Query("limit"); limit != "" {
 		query += " limit " + limit
 	}
-
-	threads := []Thread{}
-	db.Map.Select(&threads, query)
-	c.JSON(http.StatusOK, gin.H{"code": 0, "response": threads})
+	response := []Thread{}
+	db.Map.Select(&response, query)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "response": response})
 }
 
 func (db *DB) threadListPosts(c *gin.Context) {
 	posts := []Post{}
-	query := "select * from post where thread = " + c.Query("thread")
+	id := c.Query("thread")
+	query := "select * from post where thread = ?"
 	if since := c.Query("since"); since != "" {
 		query += " and date >= " + "\"" + since + "\""
 	}
@@ -462,105 +454,31 @@ func (db *DB) threadListPosts(c *gin.Context) {
 				query += " limit " + limit
 			}
 		}
-		db.Map.Select(&posts, query)
+		db.Map.Select(&posts, query, id)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "response": posts})
 	}
 	if sort == "parent_tree" {
-		postsTemp := []Post{}
-		resultList := []Post{}
+		posts := []Post{}
+		response := []Post{}
 
 		query += "order by first_path asc, last_path asc"
-		limit := c.Query("limit")
-		db.Map.Select(&postsTemp, query)
-		currParFirstPath := -1
-		limitInt, _ := strconv.Atoi(limit)
+		limit, _ := strconv.Atoi(c.Query("limit"))
+		db.Map.Select(&posts, query, id)
+		firstPath := -1
 		counter := 0
-		for i := 0; i < len(postsTemp); i++ {
-			if currParFirstPath != postsTemp[i].FirstPath {
-				currParFirstPath = postsTemp[i].FirstPath
+		for i := 0; i < len(posts); i++ {
+			if firstPath != posts[i].FirstPath {
+				firstPath = posts[i].FirstPath
 				counter++
 			}
-			if counter > limitInt {
+			if counter > limit {
 				break
 			}
-			resultList = append(resultList, postsTemp[i])
+			response = append(response, posts[i])
 		}
-		c.JSON(http.StatusOK, gin.H{"code": 0, "response": resultList})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "response": response})
 	}
 }
-
-// func (db *DB) threadListPosts(context *gin.Context) {
-// 	var posts []Post
-
-// 	query := "SELECT * FROM post WHERE thread = " + context.Query("thread")
-// 	if since := context.Query("since"); since != "" {
-// 		query += " AND date >= " + "\"" + since + "\""
-// 	}
-// 	order := context.Query("order")
-
-// 	sortType := context.Query("sort")
-// 	if sortType != "parent_tree" {
-// 		if sortType == "" {
-// 			query += " ORDER BY date " + context.DefaultQuery("order", "desc")
-// 			if limit := context.Query("limit"); limit != "" {
-// 				query += " LIMIT " + limit
-// 			}
-
-// 		} else if sortType == "flat" {
-// 			query += " ORDER BY date " + context.DefaultQuery("order", "desc")
-// 			if limit := context.Query("limit"); limit != "" {
-// 				query += " LIMIT " + limit
-// 			}
-// 		} else if sortType == "tree" {
-// 			if order == "desc" {
-// 				query += "ORDER BY first_path DESC, last_path ASC "
-// 				if limit := context.Query("limit"); limit != "" {
-// 					query += " LIMIT " + limit
-// 				}
-// 			}
-// 			if order == "asc" {
-// 				query += "ORDER BY first_path ASC, last_path ASC "
-// 				if limit := context.Query("limit"); limit != "" {
-// 					query += " LIMIT " + limit
-// 				}
-// 			}
-// 		}
-// 		db.Map.Select(&posts, query)
-// 		context.JSON(200, gin.H{"code": 0, "response": posts})
-// 	}
-// 	if sortType == "parent_tree" {
-// 		var postsTemp []Post
-// 		var resultPosts []Post
-
-// 		query += "ORDER BY first_path ASC"
-// 		query += ", last_path ASC"
-// 		limit := context.Query("limit")
-// 		db.Map.Select(&postsTemp, query)
-// 		currentParentFirstPath := -1
-// 		limitInt, _ := strconv.Atoi(limit)
-// 		counter := 0
-// 		for i := 0; i < len(postsTemp); i++ {
-
-// 			if currentParentFirstPath != postsTemp[i].FirstPath {
-// 				currentParentFirstPath = postsTemp[i].FirstPath
-// 				counter++
-// 			}
-// 			if counter > limitInt {
-
-// 				break
-// 			}
-
-// 			resultPosts = append(resultPosts, postsTemp[i])
-// 		}
-// 		for i := 0; i < len(resultPosts); i++ {
-// 			print(resultPosts[i].FirstPath)
-// 			println(resultPosts[i].LastPath)
-// 		}
-
-// 		context.JSON(200, gin.H{"code": 0, "response": resultPosts})
-
-// 	}
-// }
 
 func (db *DB) threadOpen(c *gin.Context) {
 	var thread struct {
@@ -615,39 +533,40 @@ func (db *DB) threadUnsubscribe(c *gin.Context) {
 }
 
 func (db *DB) threadUpdate(c *gin.Context) {
-	var updateThrd struct {
+	type Update struct {
 		Message string `json:"message"`
 		Slug    string `json:"slug"`
 		ID      int    `json:"thread"`
 	}
-	c.BindJSON(&updateThrd)
+	update := Update{}
+	c.BindJSON(&update)
 	db.Map.Exec("update thread set message = ?, slug = ? where id = ?",
-		updateThrd.Message, updateThrd.Slug, updateThrd.ID)
+		update.Message, update.Slug, update.ID)
 
-	threadInfo := db.threadSelect(updateThrd.ID)
-	c.JSON(http.StatusOK, gin.H{"code": 0, "response": threadInfo})
+	thread := db.threadSelect(update.ID)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "response": thread})
 }
 
 func (db *DB) threadVote(c *gin.Context) {
-	var thread struct {
+	type Thread struct {
 		Vote int `json:"vote"`
 		ID   int `json:"thread"`
 	}
+	thread := Thread{}
 	c.BindJSON(&thread)
 	if thread.Vote > 0 {
 		db.Map.Exec("update thread set likes = likes + 1, points = points + 1 where id = ?", thread.ID)
 	} else if thread.Vote < 0 {
 		db.Map.Exec("update thread set dislikes = dislikes + 1, points = points - 1 where id = ?", thread.ID)
 	}
-	threadInfo := db.threadSelect(thread.ID)
-	c.JSON(http.StatusOK, gin.H{"code": 0, "response": threadInfo})
+	response := db.threadSelect(thread.ID)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "response": response})
 }
 
 // POST METHODS
-
 const sizeOfPath int = 3
 
-func intCapacity(num int) int {
+func capacity(num int) int {
 	size := 0
 	for num > 0 {
 		num = num / 10
@@ -658,17 +577,17 @@ func intCapacity(num int) int {
 
 func makePath(number int) string {
 	var mathPath string
-	for i := sizeOfPath - intCapacity(number); i > 0; i-- {
+	for i := sizeOfPath - capacity(number); i > 0; i-- {
 		mathPath += "0"
 	}
-	numStr := strconv.Itoa(number)
-	mathPath += numStr
+	str := strconv.Itoa(number)
+	mathPath += str
 	return mathPath
 }
 
 func (db *DB) postSelect(id int) gin.H {
 	post := Post{}
-	if err := db.Map.SelectOne(&post, "select * from `post` WHERE `id` = ?", id); err == nil {
+	if err := db.Map.SelectOne(&post, "select * from post where id = ?", id); err == nil {
 		return gin.H{"date": post.Date, "dislikes": post.Dislikes, "forum": post.Forum, "id": post.ID,
 			"isApproved": post.IsApproved, "isDeleted": post.IsDeleted, "isEdited": post.IsEdited,
 			"isHighlighted": post.IsHighlighted, "isSpam": post.IsSpam, "likes": post.Likes, "message": post.Message,
@@ -690,25 +609,25 @@ func (db *DB) postCreate(c *gin.Context) {
 	} else {
 		tempPost := Post{}
 		db.Map.SelectOne(&tempPost, "select first_path, last_path from post where id = ?", post.Parent)
-		parentFirstPath := tempPost.FirstPath
-		parentLastPath := tempPost.LastPath
-		if parentLastPath == "" {
+		firstPath := tempPost.FirstPath
+		lastPath := tempPost.LastPath
+		if lastPath == "" {
 			i := id
 			var i64 int
 			i64 = int(i)
 			mathPathID := "."
 			mathPathID += makePath(i64)
 			db.Map.Exec("update post set first_path = ?, last_path = ? where id = ?",
-				parentFirstPath, mathPathID, id)
+				firstPath, mathPathID, id)
 		} else {
-			parentLastPath += "."
+			lastPath += "."
 			i := id
 			var i64 int
 			i64 = int(i)
 			mathPathID := makePath(i64)
-			parentLastPath += mathPathID
+			lastPath += mathPathID
 			db.Map.Exec("update post set first_path = ?, last_path = ? where id = ?",
-				parentFirstPath, parentLastPath, id)
+				firstPath, lastPath, id)
 		}
 	}
 	db.Map.Exec("update thread set posts = posts + 1 where id = ?", post.Thread)
@@ -719,19 +638,21 @@ func (db *DB) postCreate(c *gin.Context) {
 }
 
 func (db *DB) postDetails(c *gin.Context) {
-	a := (c.Query("post"))
-	post, _ := strconv.Atoi(a)
+	id := (c.Query("post"))
+	post, _ := strconv.Atoi(id)
+
+	entity := c.Request.URL.Query()["related"]
+	rel := relate(entity)
 
 	if response := db.postSelect(post); response != nil {
-
-		for _, entity := range c.Request.URL.Query()["related"] {
-			if entity == "user" {
-				response[entity] = db.userSelect(response[entity].(string))
-			} else if entity == "thread" {
-				response[entity] = db.threadSelect(response[entity].(int))
-			} else if entity == "forum" {
-				response[entity] = db.forumSelect(response[entity].(string), false)
-			}
+		if rel.User {
+			response["user"] = db.userSelect(response["user"].(string))
+		}
+		if rel.Thread {
+			response["thread"] = db.threadSelect(response["thread"].(int))
+		}
+		if rel.Thread {
+			response["forum"] = db.forumSelect(response["forum"].(string), false)
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "response": response})
 	} else {
@@ -772,25 +693,6 @@ func (db *DB) postList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 0, "response": posts})
 }
-
-// func (db *DB) postList(context *gin.Context) {
-// 	query := "SELECT * FROM post WHERE"
-// 	if forum := context.Query("forum"); forum != "" {
-// 		query += " forum = " + "\"" + forum + "\""
-// 	} else {
-// 		query += " thread = " + context.Query("thread")
-// 	}
-// 	if since := context.Query("since"); since != "" {
-// 		query += " AND date >= " + "\"" + since + "\""
-// 	}
-// 	query += " ORDER BY date " + context.DefaultQuery("order", "desc")
-// 	if limit := context.Query("limit"); limit != "" {
-// 		query += " LIMIT " + limit
-// 	}
-// 	var posts []Post
-// 	db.Map.Select(&posts, query)
-// 	context.JSON(200, gin.H{"code": 0, "response": posts})
-// }
 
 func (db *DB) postRemove(c *gin.Context) {
 	var post struct {
@@ -843,20 +745,18 @@ func (db *DB) postVote(c *gin.Context) {
 }
 
 // USER METHODS
-
 func (db *DB) userSelect(email string) gin.H {
 	user := User{}
 	var follower, following []string
 	var subs []int
-
 	db.Map.SelectOne(&user, "select * from user where email = ?", email)
 	db.Map.Select(&follower, "select follower from follow where following = ?", email)
 	db.Map.Select(&following, "select following from follow where follower = ?", email)
 	db.Map.Select(&subs, "select thread from subscription where user = ?", email)
 
-	userInfo := gin.H{"about": user.About, "id": user.ID, "name": user.Name,
+	response := gin.H{"about": user.About, "id": user.ID, "name": user.Name,
 		"username": user.Username, "email": user.Email, "isAnonymous": user.IsAnonymous, "followers": follower, "following": following, "subscriptions": subs}
-	return userInfo
+	return response
 }
 
 func (db *DB) userCreate(c *gin.Context) {
@@ -943,7 +843,6 @@ func (db *DB) userUnfollow(c *gin.Context) {
 func (db *DB) userListPosts(c *gin.Context) {
 	user := c.Query("user")
 	since := c.Query("since")
-
 	query := "select * from post where user = ?"
 	if since != "" {
 		query += " and date >= ?"
